@@ -93,3 +93,7 @@ python3 scripts/smoke.py target/debug/yadot
 ```
 
 The smoke harness uses temporary repositories and requires Python 3 and Git.
+
+For a disposable Linux environment with all tools included, see the
+[Docker test rig](docker/README.md). It supports automated checks and a manual
+bare-repository workflow without mounting your host home or credentials.
