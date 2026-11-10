@@ -21,9 +21,10 @@ and the Python black-box smoke suite against the release binary. Any failed
 check makes the container exit nonzero. Rebuild after code changes; the source
 is copied into the image, not mounted from the host.
 
-The smoke suite creates temporary bare repositories, a work tree, and a local
-bare remote. It exercises status, staging, committing, pushing, and failure
-propagation. Integration tests also check argument bytes and Unix signals.
+The smoke suite creates temporary repositories through `yadot init`, a work tree,
+and a local bare remote. It exercises initialization, repeat initialization,
+status, staging, committing, pushing, and failure propagation. Integration tests
+also check init argument rejection, argument bytes, and Unix signals.
 
 ## Manual workflow
 
@@ -37,7 +38,9 @@ Inside the container:
 
 ```sh
 cd "$HOME"
-git init --bare --initial-branch=main "$HOME/.yadot"
+export GIT_CONFIG_GLOBAL="$HOME/.gitconfig"  # container-local Git configuration
+git config --global init.defaultBranch main
+yadot init
 git init --bare --initial-branch=main /tmp/remote.git
 git --git-dir "$HOME/.yadot" remote add origin /tmp/remote.git
 printf 'export EDITOR=vi\n' > .bashrc
@@ -54,7 +57,11 @@ printf 'exit status: %s\n' "$?"
 ```
 
 `HOME` and a synthetic Git identity are configured inside the container; host
-Git configuration is not used. Exiting removes the container and its test data.
+Git configuration is not used. The manual example explicitly selects a
+container-local Git config file because the test image disables global config.
+`yadot init` accepts no extra arguments and follows
+Git's native branch and reinitialization behavior. Exiting removes the container
+and its test data.
 Do not mount your real home, dotfile repository, credentials, or Docker socket
 into this rig. No mounts are required.
 

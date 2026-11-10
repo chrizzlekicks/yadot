@@ -14,11 +14,13 @@ Git must also be installed and available on `PATH`. Yadot invokes the `git` exec
 
 ## Prerequisites
 
-Yadot requires a bare Git repository. Use an existing bare repository, or initialize one:
+Yadot requires a bare Git repository. Use an existing bare repository, or initialize a new one through yadot:
 
 ```sh
-git init --bare --initial-branch=main "$HOME/.yadot"
+yadot init
 ```
+
+`init` accepts no arguments and runs Git's native bare initialization. Git chooses the initial branch from its normal configuration/defaults; set `init.defaultBranch` in Git if you need a deterministic name.
 
 The default bare-repository path is `$HOME/.yadot`. Set `YADOT_DIR` to another path:
 
@@ -31,13 +33,14 @@ YADOT_DIR=/path/to/dotfiles.git yadot status
 ## Commands
 
 ```sh
+yadot init
 yadot status
 yadot add .bashrc .config/git/config
 yadot commit -m "Track shell configuration"
 yadot push -u origin main
 ```
 
-`status`, `commit`, and `push` forward their options and other arguments to Git. For example, `yadot status --short` and `yadot commit -a -m "Update config"` are passed through unchanged.
+`status`, `commit`, and `push` forward their options and other arguments to Git. For example, `yadot status --short` and `yadot commit -a -m "Update config"` are passed through unchanged. `init` takes no extra arguments and uses Git's native branch selection and reinitialization behavior.
 
 `add` accepts one or more paths, and yadot places Git's `--` before them. This means names beginning with a dash are paths, not options:
 
@@ -73,7 +76,9 @@ For a normal Git subprocess exit, yadot returns Git's exit status and leaves Git
 
 Usage errors (for example, an unknown command or `yadot add` without a path) exit 2. Missing or empty `HOME`/`YADOT_DIR` and other launch failures exit 1.
 
-Yadot 0.1 supports only `status`, `add`, `commit`, and `push`. It does not clone repositories, apply or install dotfiles, manage symlinks or backups, or provide setup automation. To show only tracked changes in status, optionally configure Git directly:
+Yadot 0.1 supports only `init`, `status`, `add`, `commit`, and `push`. It does not clone repositories, apply or install dotfiles, manage symlinks or backups, or provide setup automation. `YADOT_DIR` should point to a new directory or an existing bare repository. Pointing it at an existing non-bare repository's `.git` directory can cause native Git initialization to change `core.bare`; yadot does not preflight or prevent that.
+
+Yadot invokes Git with the process's normal Git environment and configuration. Variables such as `GIT_WORK_TREE`, templates, and object-directory settings can affect initialization and are not sanitized; Git's output and errors explain failures. To show only tracked changes in status, optionally configure Git directly:
 
 ```sh
 git config --global status.showUntrackedFiles no

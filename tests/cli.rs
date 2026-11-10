@@ -144,6 +144,60 @@ mod unix {
     }
 
     #[test]
+    fn init_uses_bare_git_arguments_only() {
+        let root = temp_dir("init-args");
+        let output = run_fake(&root, &[OsString::from("init")], "0");
+        assert_eq!(output.status.code(), Some(0));
+        assert_eq!(output.stdout, b"fake stdout\n");
+        assert_eq!(output.stderr, b"fake stderr\n");
+        assert_eq!(
+            logged(&root.join("args")),
+            vec![
+                b"--git-dir".to_vec(),
+                root.join("repo").into_os_string().into_vec(),
+                b"init".to_vec(),
+                b"--bare".to_vec(),
+            ]
+        );
+    }
+
+    #[test]
+    fn init_preserves_non_utf8_repository_path() {
+        let root = temp_dir("init-nonutf8");
+        let (_bin, log) = fake_git(&root);
+        let bad = OsString::from_vec(vec![b'r', 0x80, b'e', b'p', b'o']);
+        let output = Command::new(env!("CARGO_BIN_EXE_yadot"))
+            .arg("init")
+            .env("HOME", &root)
+            .env("YADOT_DIR", &bad)
+            .env("PATH", &root)
+            .env("FAKE_GIT_LOG", &log)
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(0));
+        assert_eq!(logged(&log)[1], bad.into_vec());
+    }
+
+    #[test]
+    fn init_rejects_arguments_without_launching_git() {
+        for extra in ["other-directory", "--bare", "--initial-branch=main", "--"] {
+            let root = temp_dir("init-reject");
+            let (_bin, log) = fake_git(&root);
+            let output = Command::new(env!("CARGO_BIN_EXE_yadot"))
+                .arg("init")
+                .arg(extra)
+                .env("HOME", &root)
+                .env("YADOT_DIR", root.join("repo"))
+                .env("PATH", &root)
+                .output()
+                .unwrap();
+            assert_eq!(output.status.code(), Some(2));
+            assert!(text(&output.stderr).contains("init does not accept arguments"));
+            assert!(!log.exists());
+        }
+    }
+
+    #[test]
     fn forwards_git_arguments_output_status_and_paths() {
         let root = temp_dir("forward");
         let args = vec![

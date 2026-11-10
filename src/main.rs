@@ -23,9 +23,16 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
-    if !matches!(command.as_ref(), "status" | "add" | "commit" | "push") {
+    if !matches!(
+        command.as_ref(),
+        "init" | "status" | "add" | "commit" | "push"
+    ) {
         eprintln!("yadot: unknown command `{command}`");
         print_help();
+        return ExitCode::from(2);
+    }
+    if command == "init" && args.next().is_some() {
+        eprintln!("yadot: init does not accept arguments");
         return ExitCode::from(2);
     }
 
@@ -49,20 +56,23 @@ fn main() -> ExitCode {
         None => home.join(".yadot"),
     };
 
-    let mut git_args: Vec<OsString> = vec![
-        "--git-dir".into(),
-        git_dir.into_os_string(),
-        "--work-tree".into(),
-        home.into_os_string(),
-        command.as_ref().into(),
-    ];
-    git_args.extend(args);
-    if command == "add" {
-        if git_args.len() == 5 {
-            eprintln!("yadot: add requires at least one path");
-            return ExitCode::from(2);
+    let mut git_args: Vec<OsString> = vec!["--git-dir".into(), git_dir.into_os_string()];
+    if command == "init" {
+        git_args.extend(["init".into(), "--bare".into()]);
+    } else {
+        git_args.extend([
+            "--work-tree".into(),
+            home.into_os_string(),
+            command.as_ref().into(),
+        ]);
+        git_args.extend(args);
+        if command == "add" {
+            if git_args.len() == 5 {
+                eprintln!("yadot: add requires at least one path");
+                return ExitCode::from(2);
+            }
+            git_args.insert(5, OsString::from("--"));
         }
-        git_args.insert(5, OsString::from("--"));
     }
 
     #[cfg(unix)]
@@ -91,7 +101,7 @@ fn main() -> ExitCode {
 }
 
 fn print_help() {
-    println!("Usage: yadot <status|add|commit|push> [arguments]");
+    println!("Usage: yadot <init|status|add|commit|push> [arguments]");
     println!();
     println!("Uses YADOT_DIR as the bare repository (default: $HOME/.yadot)");
 }

@@ -37,7 +37,13 @@ def main(binary):
             "GIT_AUTHOR_NAME": "Smoke Author", "GIT_AUTHOR_EMAIL": "smoke@example.invalid",
             "GIT_COMMITTER_NAME": "Smoke Committer", "GIT_COMMITTER_EMAIL": "smoke@example.invalid",
         })
-        check(git(["init", "--bare", "--initial-branch=main", str(yadot)], env).returncode == 0, "init yadot")
+        check(git(["config", "--file", str(config), "init.defaultBranch", "main"], env).returncode == 0, "configure default branch")
+        missing_status = run([binary, "status"], {**env, "YADOT_DIR": str(root / "missing.git")}, home)
+        check(missing_status.returncode != 0 and not (root / "missing.git").exists(), "missing status does not create repository")
+        initialized = run([binary, "init"], env, home)
+        check(initialized.returncode == 0 and yadot.is_dir(), "yadot init")
+        check(git(["config", "--get", "core.bare"], env, yadot).stdout.strip() == "true", "bare repository")
+        check(git(["config", "--get", "core.worktree"], env, yadot).returncode != 0, "no worktree setting")
         check(git(["init", "--bare", "--initial-branch=main", str(remote)], env).returncode == 0, "init remote")
         check(git(["--git-dir", str(yadot), "remote", "add", "origin", str(remote)], env).returncode == 0, "add remote")
 
@@ -58,6 +64,13 @@ def main(binary):
         pushed = run([binary, "push", "origin", "main"], env, home)
         check(pushed.returncode == 0, "push")
         check(git(["--git-dir", str(remote), "show", "main:subdir/tracked.txt"], env).stdout == "smoke\n", "remote content")
+        sentinel = yadot / "sentinel"
+        sentinel.write_text("keep\n")
+        before_ref = git(["--git-dir", str(yadot), "rev-parse", "main"], env).stdout
+        repeated = run([binary, "init"], env, home)
+        check(repeated.returncode == 0 and sentinel.read_text() == "keep\n", "repeat init preserves repository files")
+        check(git(["--git-dir", str(yadot), "rev-parse", "main"], env).stdout == before_ref, "repeat init preserves ref")
+        check(git(["--git-dir", str(yadot), "show", "main:subdir/tracked.txt"], env).stdout == "smoke\n", "repeat init preserves content")
 
         missing = run([binary, "add", "does-not-exist"], env, home)
         direct = git(["--git-dir", str(yadot), "--work-tree", str(home), "add", "--", "does-not-exist"], env, home)
