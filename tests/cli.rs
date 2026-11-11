@@ -1,6 +1,6 @@
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -93,9 +93,11 @@ fn add_requires_paths() {
 #[cfg(unix)]
 mod unix {
     use super::*;
+    use std::ffi::OsString;
     use std::os::unix::ffi::OsStringExt;
     use std::os::unix::fs::PermissionsExt;
     use std::os::unix::process::ExitStatusExt;
+    use std::path::Path;
 
     fn fake_git(root: &Path) -> (PathBuf, PathBuf) {
         let bin = root.join("git");
@@ -274,5 +276,31 @@ mod unix {
             .unwrap();
         assert_eq!(output.status.code(), Some(1));
         assert!(text(&output.stderr).contains("could not run git"));
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn forwards_windows_git_exit_status() {
+    let root = temp_dir("windows-status");
+    let source = root.join("git.rs");
+    fs::write(&source, "fn main() { std::process::exit(std::env::var(\"FAKE_GIT_STATUS\").unwrap().parse().unwrap()); }").unwrap();
+    assert!(Command::new("rustc")
+        .arg(&source)
+        .arg("-o")
+        .arg(root.join("git.exe"))
+        .status()
+        .unwrap()
+        .success());
+    for code in [7, 256] {
+        let output = Command::new(env!("CARGO_BIN_EXE_yadot"))
+            .arg("status")
+            .env("HOME", &root)
+            .env("YADOT_DIR", root.join("repo"))
+            .env("PATH", &root)
+            .env("FAKE_GIT_STATUS", code.to_string())
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(code));
     }
 }

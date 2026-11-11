@@ -30,7 +30,8 @@ def main(binary):
         yadot = root / "yadot.git"
         remote = root / "remote.git"
         config = root / "gitconfig"
-        env = os.environ.copy()
+        env = {key: value for key, value in os.environ.items()
+               if not key.upper().startswith("GIT_")}
         env.update({
             "HOME": str(home), "YADOT_DIR": str(yadot),
             "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": str(config),

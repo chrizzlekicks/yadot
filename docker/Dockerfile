@@ -23,4 +23,4 @@ ENV HOME=/tmp/yadot-home \
 RUN mkdir -p "$HOME" && cargo build --release --locked
 ENV PATH="/src/target/release:${PATH}"
 
-CMD ["sh", "-c", "cargo fmt --check && cargo clippy --locked --all-targets --all-features -- -D warnings && cargo test --locked --all-targets --all-features && python3 scripts/smoke.py target/release/yadot"]
+CMD ["sh", "-c", "cargo fmt --check && cargo clippy --locked --all-targets --all-features -- -D warnings && cargo test --locked --all-targets --all-features && python3 scripts/smoke.py target/release/yadot && python3 tests/smoke_env.py target/release/yadot"]

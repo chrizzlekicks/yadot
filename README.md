@@ -95,6 +95,7 @@ cargo test
 cargo build
 cargo build --release
 python3 scripts/smoke.py target/debug/yadot
+python3 tests/smoke_env.py target/debug/yadot
 ```
 
 The smoke harness uses temporary repositories and requires Python 3 and Git.

@@ -86,7 +86,7 @@ fn main() -> ExitCode {
     {
         match Command::new("git").args(&git_args).status() {
             Ok(status) => match status.code() {
-                Some(code) => ExitCode::from(code as u8),
+                Some(code) => std::process::exit(code),
                 None => {
                     eprintln!("yadot: git terminated by signal");
                     ExitCode::from(1)
